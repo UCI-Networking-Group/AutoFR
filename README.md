@@ -35,7 +35,7 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
 
 ### Setup
 
-1. We assume you satisfy the [hardware dependencies](#hardware-dependencies).
+1. We assume you satisfy the [hardware](#hardware-dependencies) and [OS](#os-dependencies) dependencies.
 2. Install the core dependencies.
    > $ sudo apt-get install git python3 python3-dev python3-pip
    
@@ -121,6 +121,10 @@ memory with 20 GiB of storage.
 ### Software Dependencies
 
 We list the dependencies that are necessary to run AutoFR. Please follow instructions in [Setup section](#setup) instead to install them.
+
+#### OS Dependencies
+
+AutoFR has been tested on Debian 5.10 and Ubuntu 18.04.6 LTS.
 
 #### Core Dependencies
 * Python 3.6+
