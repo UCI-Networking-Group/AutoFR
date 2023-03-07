@@ -1,0 +1,459 @@
+import datetime
+import logging
+import os
+import shutil
+import time
+import typing
+from typing import Tuple
+
+import numpy as np
+from selenium.common.exceptions import WebDriverException
+
+from autofr.common.action_space_utils import TYPE_ESLD
+from autofr.common.docker_utils import InitSiteFeedbackDockerResponse, SiteFeedbackFilterRulesDockerResponse
+from autofr.common.exceptions import InvalidSiteFeedbackException, BanditPullTimeout, AutoFRException, \
+    BanditPullInvalid
+from autofr.common.filter_rules_utils import RULES_DELIMITER, get_rules_from_filter_list
+from autofr.rl.action_space import TYPE, SLEEPING_ARM, UNKNOWN_ARM
+from autofr.rl.agent import DomainHierarchyAgent
+from autofr.rl.bandits import AutoFRMultiArmedBandit
+from autofr.rl.base import Environment
+from autofr.rl.browser_env.reward import SiteFeedbackRange
+
+logger = logging.getLogger(__name__)
+
+
+class AutoFRResults:
+    def __init__(self,
+                 experiment_name: str,
+                 scores_per_round: dict,
+                 optimal_per_round: dict,
+                 q_values_per_experiment: list,
+                 action_count_per_experiment: list,
+                 time_per_experiment: list = None,
+                 time_init_experiment: int = 0):
+        self.experiment_name = experiment_name
+        self.scores_per_round = scores_per_round
+        self.optimal_per_round = optimal_per_round
+        self.q_values_per_experiment = q_values_per_experiment
+        self.action_count_per_experiment = action_count_per_experiment
+        self.time_per_experiment = time_per_experiment or []
+        self.time_init_experiment = time_init_experiment
+
+
+class AutoFREnvironmentBase(Environment):
+
+    def __init__(self,
+                 url: str,
+                 bandit: AutoFRMultiArmedBandit,
+                 agent: DomainHierarchyAgent,
+                 label: str = 'Multi-Armed Bandit',
+                 iteration_threshold: int = 10,
+                 output_directory=None,
+                 do_init_only: bool = False,
+                 save_output: bool = True,
+                 pull_timeout: int = 300,
+                 use_time_limit_per_mab_run: bool = False,
+                 time_limit_per_mab_run: int = 3600,
+                 pull_try_max: int = 3):
+
+        Environment.__init__(self, bandit, [agent], label=label)
+        self.main_agent = agent
+        self.url = url
+        self.iteration_threshold = iteration_threshold
+        self.main_type = TYPE_ESLD
+        self.output_directory = output_directory
+        self.do_init_only = do_init_only
+        # save every time iterations
+        self.save_time = 10
+        self.save_output = save_output
+        self.pull_timeout = pull_timeout
+        self.pull_try_max = pull_try_max
+        self.use_time_limit_per_mab_run = use_time_limit_per_mab_run
+        # in seconds
+        self.time_limit_per_mab_run = time_limit_per_mab_run
+        # to do hold min results
+        self.min_env = None
+        self.min_results = None
+
+    def zip_output(self, include_rules: str = True):
+        """
+        Zips up the output and delete the directory
+        """
+        # shutil.make_archive(where you want the file to be including the name, zip format, the root dir to find the directory you wanna zip, the name of the directory you want to zip)
+        data_dir = self.bandit.get_base_data_dir()
+        # copy rules folder to the data folder too
+        new_rules_dir = data_dir + os.sep + "rules"
+
+        if os.path.isdir(self.output_directory):
+            shutil.copytree(self.output_directory, new_rules_dir, ignore_dangling_symlinks=True)
+
+        data_dir = self.bandit.get_base_data_dir()
+        logger.info(f"Zipping up {data_dir}")
+        shutil.make_archive(data_dir, 'zip', os.path.dirname(data_dir), self.bandit.base_name)
+
+    def destroy(self, data: bool = True, rules: bool = True):
+        """
+        Destroy data = do not keep the output in the data directory
+        Destroy rules = do not keep the filter rules and graphs
+        """
+        if rules:
+            if os.path.isdir(self.output_directory):
+                logger.warning(f"{self.__class__.__name__}: Deleting {self.output_directory}")
+                shutil.rmtree(self.output_directory)
+        if data:
+            self.bandit.destroy()
+
+    def reset(self):
+        self.main_agent.reset()
+        # init history of nodes (managed by agent)
+        self.main_agent.init_history_for_all_nodes()
+        self.min_env = None
+        self.min_results = None
+
+    def print_filter_rules_created(self):
+        file_path = self.main_agent.get_filter_rules_file_path()
+        if os.path.isfile(file_path):
+            filter_rules, whitelist_rules = get_rules_from_filter_list(file_path)
+            #logger.info(f"Filter rules created: {filter_rules}, whitelilst rules: {whitelist_rules}")
+            prefix_str = """\n
+! Title: AutoFR
+! Last modified: %s
+! Homepage: https://arxiv.org/abs/2202.12872
+! Filter rules generated by AutoFR
+! Apply on %s only\n%s
+            """ % (str(datetime.datetime.now()), self.url, "\n".join(filter_rules))
+            logger.info(prefix_str)
+
+    @staticmethod
+    def is_valid_state_range(init_state_range) -> bool:
+        if not init_state_range:
+            return False
+        avg_state = init_state_range.get_average()
+        if avg_state is None:
+            return False
+        return avg_state.ad_counter > 0 and avg_state.image_counter > 0 or avg_state.textnode_counter > 0
+
+    def end_round(self, round_counter: int = 0, arms_type: str = None) -> list:
+        logger.info(f"Processing the ending of round {round_counter}")
+        self.main_agent.update_rules_potential_tracking()
+
+        high_q_arms = self.main_agent.update_rules_based_on_q_values_new()
+        low_q_arms = self.main_agent.update_arms_based_on_q_values_new(node_type=arms_type,
+                                                                           high_q_arms=high_q_arms)
+
+        if self.save_output:
+            self.main_agent.save()
+        return low_q_arms
+
+    def end_experiment(self):
+        if self.save_output:
+            self.main_agent.save()
+        self.print_filter_rules_created()
+
+
+class AutoFREnvironment(AutoFREnvironmentBase):
+
+    def build_graph(self, perf_log_files: list,
+                    outgoing_requests: list,
+                    init_state_range: SiteFeedbackRange,
+                    save_raw_initiator_chain: bool = True):
+
+        # let bandit know of the base representation and optimal state
+        self.bandit.set_init_site_feedback(init_state_range.get_average())
+        self.bandit.set_init_state_range(init_state_range)
+
+        # build the action space
+        self.main_agent.action_space.build_graph(self.url, perf_log_files,
+                                                 outgoing_requests,
+                                                 node_time=self.main_agent.t,
+                                                 save_raw_initiator_chain=save_raw_initiator_chain)
+
+        # init history of nodes (managed by agent)
+        self.main_agent.init_history_for_all_nodes()
+
+    def run_init_state_only(self,
+                            init_state_iterations: int = 1,
+                            ignore_states_with_zero_ads: bool = True,
+                            check_valid_state_range: bool = True,
+                            save_raw_initiator_chain: bool = True,
+                            filter_list_path: str = None,
+                            ) -> InitSiteFeedbackDockerResponse:
+
+        before = time.time()
+
+        docker_response: InitSiteFeedbackDockerResponse = self.bandit.find_initial_state(self.url,
+                                                                                         init_state_iterations=init_state_iterations,
+                                                                                         ignore_states_with_zero_ads=ignore_states_with_zero_ads,
+                                                                                         filter_list_path=filter_list_path)
+
+        #logger.debug("%s - Found initial site feedback range: %s", self.url, str(docker_response.init_site_feedback_range))
+        logger.info("%s - Initializing took %d", self.url, int(time.time() - before))
+
+        if check_valid_state_range and not self.is_valid_state_range(docker_response.init_site_feedback_range):
+            raise InvalidSiteFeedbackException("Init state range is not valid")
+
+        before = time.time()
+        logger.info("%s - Building action space", self.url)
+        self.build_graph(docker_response.perf_log_files,
+                         docker_response.outgoing_requests,
+                         docker_response.init_site_feedback_range,
+                         save_raw_initiator_chain=save_raw_initiator_chain)
+        logger.info("%s - DONE: Building action space: %s", self.url, int(time.time() - before))
+
+        return docker_response
+
+    def _remove_unknown_arms(self, response: InitSiteFeedbackDockerResponse):
+        """
+        Pre-check whether the arms exist in the collected perf files (web requests)
+        """
+        unknown_arms = []
+        for arm in self.main_agent.current_arms:
+            node_type = self.main_agent.action_space.get(arm)[TYPE]
+            if not response.has_url_variations_in_all_responses(arm, node_type):
+                unknown_arms.append(arm)
+
+        for arm in unknown_arms:
+            self.main_agent.action_space.get(arm)[SLEEPING_ARM] = True
+            self.main_agent.action_space.get(arm)[UNKNOWN_ARM] = True
+            self.main_agent.current_arms.remove(arm)
+
+    def run_mab(self, trials: int, round_counter: int, trial_must_block: bool = True) \
+            -> Tuple[list, typing.Any, typing.Any]:
+        iteration_times = []
+        num_of_agents = 1
+        scores = np.zeros((trials, num_of_agents))
+        optimal = np.zeros_like(scores)
+        before_mab_time = time.time()
+        for trial in range(trials):
+            logger.info(f"{self.url} - round {round_counter}: Running trial {trial} / {trials}")
+            before_iter = time.time()
+            if self.save_output and trial % self.save_time == 0:
+                logger.info(f"{self.url} - round {round_counter}: Saving agent at time {trial}")
+                self.main_agent.save()
+            logger.info(
+                f"{self.url} - round {round_counter}: RL number of arms to choose from {len(self.main_agent.current_arms)} / {self.main_agent.action_space.get_number_of_awake_nodes()}")
+
+            if len(self.main_agent.current_arms) > 0:
+                self.main_agent.action_space.set_nodes_as_explored(self.main_agent.current_arms)
+
+            # we do while here because we want to ignore iterations where the action did not associate with reward
+            while len(self.main_agent.current_arms) > 0:
+                # select action using policy
+                action = self.main_agent.choose(trial)
+
+                # pull action
+                action_list = action.split(RULES_DELIMITER)
+                response: SiteFeedbackFilterRulesDockerResponse = None
+                pull_try_count = 0
+                pull_exception = None
+                while pull_try_count < self.pull_try_max:
+                    before_pull = time.time()
+                    try:
+                        response = self.bandit.pull(self.url, action_list)
+                        has_blocked = self.main_agent.has_blocked(response.block_items_and_match)
+                        if not has_blocked and response.site_feedback.ad_counter == 0:
+                            raise BanditPullInvalid(f"Pulling action {action_list} had no blocked items and no ads served")
+                    except (AutoFRException, WebDriverException) as e:
+                        logger.warning(f"Could not pull {self.url}: {action_list}")
+                        pull_exception = e
+                        pull_try_count += 1
+                    else:
+                        pull_time = int(time.time() - before_pull)
+                        if pull_time > self.pull_timeout:
+                            raise BanditPullTimeout(f"Time to pull {[pull_time]} exceeded {self.pull_timeout} seconds")
+                        break
+
+                # if response was not successful
+                if response is None and pull_exception:
+                    raise pull_exception
+
+                # observe the reward
+                associated_reward_to_action = self.main_agent.observe(response.reward,
+                                                                      response.block_items_and_match,
+                                                                      response.site_feedback)
+
+                # update debug information of reward was associated to the action
+                if associated_reward_to_action:
+                    scores[trial, 0] += response.reward.reward
+                    if response.is_optimal:
+                        optimal[trial, 0] += 1
+
+                    # self.compare_images_and_textnodes(reward_data, images_records, textnodes_records)
+                    iteration_time = int(time.time() - before_iter)
+                    iteration_times.append(iteration_time)
+                    logger.info(f"{self.url} - round {round_counter}: Reward is associated to arm {action}")
+                    logger.info(
+                        f"{self.url} - round {round_counter}: RL iteration took {iteration_time} for arm {action}")
+                    break
+                else:
+                    logger.warning(f"{self.url} - round {round_counter}: Reward not associated to arm {action}")
+
+                # if we do not care about having has_blocked = True, then we always break after every pull
+                if not trial_must_block:
+                    break
+
+            # checks if mab can end early
+            if len(self.main_agent.current_arms) == 0:
+                logger.warning(
+                    f"{self.url} - round {round_counter}: Stopping round early because no more arms to choose from, trial {trial}, agent time {self.main_agent.t}")
+                break
+
+            # did we reach a time limit, if so, stop
+            if self.use_time_limit_per_mab_run:
+                mab_time = int(time.time() - before_mab_time)
+                if mab_time >= self.time_limit_per_mab_run:
+                    #logger.debug(f"Stopping MAB run due to time limit reached:"
+                    #             f"{mab_time} >= {self.time_limit_per_mab_run}")
+                    break
+
+        return iteration_times, scores, optimal
+
+    def run(self, trials: int = 200,
+            experiments: int = 1,
+            init_state_iterations: int = 10,
+            save_raw_initiator_chain: bool = True,
+            remove_output: bool = False) \
+            -> AutoFRResults:
+
+        before_init_time = time.time()
+        scores_per_round = dict()
+        optimal_per_round = dict()
+        q_values_per_experiment = []
+        action_count_per_experiment = []
+        init_response = self.run_init_state_only(init_state_iterations=init_state_iterations,
+                                                 save_raw_initiator_chain=save_raw_initiator_chain)
+
+        if self.save_output:
+            self.main_agent.save()
+
+        # stop early
+        if self.do_init_only:
+            logger.warning(f"Stopping early due to do_init_only")
+            env_results = AutoFRResults(str(self.main_agent),
+                                        scores_per_round,
+                                        optimal_per_round,
+                                        q_values_per_experiment,
+                                        action_count_per_experiment)
+            return env_results
+
+        init_total_time = int(time.time() - before_init_time)
+
+        time_per_experiment = []
+        for index in range(experiments):
+            before_experiment_time = time.time()
+            if index > 0:
+                self.reset()
+
+            # set the very first arms
+            self.main_agent.current_arms = self.main_agent.action_space.get_arms_to_initialize(node_type=self.main_type)
+            round_times = []
+            round_counter = -1
+
+            while len(self.main_agent.current_arms) > 0:
+                # start of a round
+                before_round = time.time()
+                round_counter += 1
+
+                # make sure we only consider arms that are not unknown first
+                self._remove_unknown_arms(init_response)
+
+                # We stop experiment because if there are fewer than 2 actions, then there is either no action or
+                # the direct action below already has the same q-value as the parent
+                if len(self.main_agent.current_arms) == 0:
+                    break
+
+                # keep track of when round started
+                self.main_agent.round_history.append(self.main_agent.t)
+
+                # init the arms (do not increment time)
+                self.main_agent.initialize_arms(self.url, self.main_agent.current_arms)
+                logger.info(
+                    f"{self.url} - round {round_counter}: Time it took to initialize arms {int(time.time() - before_round)}")
+
+                # Calculate number of trials this round
+                trials = self.iteration_threshold * len(self.main_agent.current_arms)
+                logger.info(f"{self.url} - round {round_counter}: Number of trials will be {trials}")
+
+                # Do main MAB
+                iteration_times, scores, optimal = self.run_mab(trials, round_counter)
+
+                # keep track for plotting
+                if trials > 0 and len(iteration_times) > 0:
+                    if round_counter not in scores_per_round:
+                        scores_per_round[round_counter] = scores
+                        optimal_per_round[round_counter] = optimal
+                    else:
+                        scores_per_round[round_counter] = add_rows_to_array_and_extend(scores_per_round[round_counter],
+                                                                                       scores)
+                        optimal_per_round[round_counter] = add_rows_to_array_and_extend(
+                            optimal_per_round[round_counter], optimal)
+
+                # Post process round
+                self.end_round(round_counter=round_counter)
+                round_time = int(time.time() - before_round)
+                round_times.append(round_time)
+                iteration_time_avg = 0
+                if len(iteration_times) > 0:
+                    iteration_time_avg = np.average(iteration_times)
+                logger.info(
+                    f"{self.url} - round {round_counter}: Overall round time took {round_time}, avg iteration time: {iteration_time_avg}")
+
+            # get q-value of each explored action for this experiment
+            records = self.main_agent.action_space.get_explored_nodes_with_q_values()
+            for rec in records:
+                rec["experiment"] = index
+            q_values_per_experiment += records
+
+            # get number of times each action has been experimented on
+            records = self.main_agent.action_space.get_action_attempts_of_nodes()
+            for rec in records:
+                rec["experiment"] = index
+            action_count_per_experiment += records
+
+            after_experiment_time = int(time.time() - before_experiment_time)
+            time_per_experiment.append(after_experiment_time)
+            # end experiment
+            round_time_avg = 0
+            if len(round_times) > 0:
+                round_time_avg = np.average(round_times)
+            logger.info(
+                f"{self.url} - Overall entire experiment time took {after_experiment_time} sec, "
+                f"init time took {init_total_time} sec, "
+                f"avg round time: {round_time_avg} sec, # of rounds: {len(round_times)}")
+            self.end_experiment()
+
+            if remove_output:
+                self.destroy()
+
+        # do the average
+        for key in scores_per_round:
+            scores_per_round[key] = scores_per_round[key] / experiments
+            optimal_per_round[key] = optimal_per_round[key] / experiments
+
+        env_results = AutoFRResults(str(self.main_agent),
+                                    scores_per_round,
+                                    optimal_per_round,
+                                    q_values_per_experiment,
+                                    action_count_per_experiment,
+                                    time_per_experiment,
+                                    time_init_experiment=init_total_time)
+        return env_results
+
+
+def add_rows_to_array_and_extend(arr1, arr2, number_of_agents: int = 1):
+    if len(arr1) == len(arr2):
+        return arr1 + arr2
+
+    smaller_arr = arr1
+    larger_arr = arr2
+    if len(arr1) > len(arr2):
+        smaller_arr = arr2
+        larger_arr = arr1
+
+    # get the difference in rows
+    diff_arr = np.zeros((abs(len(arr1) - len(arr2)), number_of_agents))
+    # use zero to add it as rows
+    add_to_row_index = 0
+    extended_arr = np.append(smaller_arr, diff_arr, add_to_row_index)
+    return larger_arr + extended_arr

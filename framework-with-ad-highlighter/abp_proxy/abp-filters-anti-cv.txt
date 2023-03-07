@@ -1,0 +1,13 @@
+[Adblock Plus 3.1]
+! Checksum: e21fn3Ldug+2L2niY/LTRQ
+! Version: 202012162200
+! Title: ABP filters
+! Last modified: 16 Dec 2020 22:00 UTC
+! Expires: 1 hours (update frequency)
+! Homepage: https://github.com/abp-filters/abp-filters-anti-cv
+!
+! Filter list designed to fight circumvention ads in Adblock Plus
+!
+! Please report any issues
+! on GitHub https://github.com/abp-filters/abp-filters-anti-cv/issues
+! or via filters+cv@adblockplus.org

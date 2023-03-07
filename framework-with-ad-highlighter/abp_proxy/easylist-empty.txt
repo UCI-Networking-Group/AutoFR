@@ -1,0 +1,12 @@
+[Adblock Plus 2.0]
+! Checksum: 6Nv7wVeijcw2FQ4Gov8Qiw
+! Version: 202103041930
+! Title: EasyList
+! Last modified: 04 Mar 2021 19:30 UTC
+! Expires: 1 days (update frequency)
+! Homepage: https://easylist.to/
+! Licence: https://easylist.to/pages/licence.html
+!
+! Please report any unblocked adverts or problems
+! in the forums (https://forums.lanik.us/)
+! or via e-mail (easylist@protonmail.com).

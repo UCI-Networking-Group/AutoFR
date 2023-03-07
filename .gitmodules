@@ -1,0 +1,3 @@
+[submodule "ad_highlighter"]
+	path = ad_highlighter
+	url = https://github.com/UCI-Networking-Group/ad-highlighter-autofr.git
