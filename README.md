@@ -54,7 +54,7 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
 6. Install AutoFR dependencies.
   >  $ pip3 install -e .
 7. Build the docker container.
-> $ docker build -t flg-ad-highlighter --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -f framework-with-ad-highlighter/Dockerfile .; docker build -t flg-ad-highlighter-adgraph --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -f framework-with-ad-highlighter/DockerAdgraphfile .
+> $ docker build -t flg-ad-highlighter-adgraph --build-arg USER_ID=$(id -u) --build-arg GROUP_ID=$(id -g) -f framework-with-ad-highlighter/DockerAdgraphfile .
 8. Create output directories that AutoFR expects. See [Understanding the Output](#understanding-the-output) for description.
 > $ mkdir temp_graphs; mkdir -p data/output/
 9. Done. You are now ready to use AutoFR.   
@@ -137,6 +137,7 @@ We list the dependencies that are necessary to run AutoFR. Please follow instruc
 * pandas
 * numpy
 * selenium
+* pyvirtualdisplay
 
 #### Prior Work Dependencies
 
@@ -177,3 +178,7 @@ We also encourage you to provide us ([athinagroupreleases@gmail.com](mailto:athi
 ## Contact Us
 
 Feel free to contact the authors, specifically [Hieu Le](https://levanhieu.com) if you have any questions.
+
+## Acknowledgements
+
+To integrate [AdGraph](https://github.com/uiowa-irl/AdGraph) successfully, we thank its authors ([Umar Iqbal](https://umariqbal.com/)), who  graciously provided the necessary code to help parse AdGraphs. We include it in [adgraphapi](adgraphapi) with slight modifications.

@@ -14,6 +14,7 @@ setup(name='autofr',
         'pandas',
         'requests',
         'numpy',
-        'selenium'
+        'selenium',
+        'pyvirtualdisplay'
     ]
 )
