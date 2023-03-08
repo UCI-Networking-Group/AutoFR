@@ -130,3 +130,11 @@ dmypy.json
 
 # MAC
 .DS_Store
+
+# AutoFR Specific
+data
+temp_graphs
+adgraphapi/base_dir/**
+adgraphapi/adgraph
+adgraphapi/adgraph-buildgraph.dSYM
+adgraphapi/adgraph.dSYM
