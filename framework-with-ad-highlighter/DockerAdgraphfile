@@ -5,13 +5,14 @@ ARG GROUP_ID
 ARG FOR_MAC
 ARG FOR_MAC_M1
 
-# gfortran libatlas-base-dev fonts-noto fonts-dejavu fonts-freefont-ttf libhdf5-dev libnetcdf-dev
-RUN apt-get update \
-    && apt-get install -y python3 python3-dev python3-pip xvfb chromium chromium-driver git curl python3-numpy python3-pandas
+# This currently does not work FOR_MAC yet.
 
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y build-essential python3 python3-dev python3-pip xvfb git curl wget python3-numpy python3-pandas unzip
+    
 RUN curl -sL deb.nodesource.com/setup_13.x | bash -
-RUN apt-get install -y nodejs
-RUN node -v
+RUN apt-get install --no-install-recommends -y nodejs \
+        && node -v
 
 RUN if [ -z "$FOR_MAC" ]; then addgroup --gid $GROUP_ID user ; fi
 RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
@@ -21,19 +22,16 @@ RUN chown -R user /usr/local/lib/
 
 USER user
 WORKDIR /home/user
+# need selenium 3.141 to work with AdGraph
 RUN pip3 install --user setuptools selenium pyvirtualdisplay numpy pandas networkx adblockparser \
    && pip3 install --user --upgrade requests \
    && pip3 install --user selenium==3.141.0
 
-USER root
-RUN if [ ! -z "$FOR_MAC" ]; then apt-get install -y pkg-config libpixman-1-dev libcairo2-dev libpango1.0-dev libjpeg62-turbo-dev libgif-dev librsvg2-dev libhdf5-dev libnetcdf-dev libblas-dev liblapack-dev libatlas-base-dev gfortran ; fi
-
 # add in adgraph for linux
 USER root
-RUN apt-get install -y unzip wget
 RUN if [ ! -z "$FOR_MAC_M1" ]; then wget https://github.com/uiowa-irl/AdGraph/releases/download/v1.0/AdGraph-OSX-10.14.zip && unzip AdGraph-OSX-10.14.zip && mv AdGraph-MacOS AdGraph && ln -s AdGraph/Chromium.app/Contents/MacOS/Chromium AdGraph/chrome ; else wget https://github.com/uiowa-irl/AdGraph/releases/download/v1.0/AdGraph-Ubuntu-16.04.zip && unzip AdGraph-Ubuntu-16.04.zip && mv AdGraph-Ubuntu-16.04 AdGraph && chown -R user AdGraph ; fi
 RUN if [ ! -z "$FOR_MAC_M1" ]; then wget https://chromedriver.storage.googleapis.com/2.42/chromedriver_mac64.zip && unzip chromedriver_mac64.zip && chown -R user chromedriver; else wget https://chromedriver.storage.googleapis.com/2.42/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && chown -R user chromedriver ; fi
-RUN apt-get install -y gconf-service libasound2 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils
+RUN apt-get install --no-install-recommends -y gconf-service libasound2 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libfontconfig1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils
 
 # copy in adgraphapi
 COPY adgraphapi adgraphapi
@@ -50,7 +48,6 @@ COPY framework-with-ad-highlighter/patch*.py ./
 # misc
 USER root
 ENV IS_INSIDE_DOCKER True
-RUN chown user /usr/bin/chromedriver
 
 # add in common code for autofr and install it
 USER user
