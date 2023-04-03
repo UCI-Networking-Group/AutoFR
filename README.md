@@ -96,6 +96,8 @@ Test the rules by applying it on the site that you created them for.
 
 As an example of how site snapshots can be reused, we provide the following instructions on reproducing our results from the paper. 
 
+(Note that this only works if you are using the changeset used by the paper and the site snapshots collected during that time. Any changes/improvements to the algorithm of AutoFR or how site snapshots are created will alter the results of the generated filter rules)
+
 1. Make sure you have followed the [setup](#setup) instructions.
 2. Open up the AutoFR project directory using a terminal window.
 3. Activate your virtual environment.
@@ -107,7 +109,23 @@ As an example of how site snapshots can be reused, we provide the following inst
     > $ python scripts/autofr_use_snapshots.py --site_url "https://www.cricbuzz.com/"  --snapshot_dir AutoFRGEval_www.cricbuzz.com_ad3dce7b/AutoFRGControlled_www.cricbuzz.com_AdGraph_Snapshots_82af60e4
 8. It should print out the same filter rules as listed in the CSV file for that particular site.
 
+For artifact-reviewers and convenience, we also provide a script to automatically check the reproducibility.
+1. Make sure you have followed the [setup](#setup) instructions.
+2. Open up the AutoFR project directory using a terminal window.
+3. Activate your virtual environment.
+4. [Get access to our dataset](#autofr-dataset). 
+5. Download any zips from the dataset into one directory. (you do not need to unzip it)
+6. Download the `Top5K_rules.csv` within our dataset.
+7. > $ python scripts/artifact-review/confirm_reproducibility.py --csv_file_path Top5K_rules.csv --snapshots_dir [path to zips]
 
+The [confirm_reproducibility script](scripts/artifact-review/confirm_reproducibility.py) will output a CSV file that summarizes whether the filter rules match. There will also be summary in the console as well.
+
+Example console output:
+```text
+SUMMARY:
+	- Reproduced 3/3
+	- Final results in temp_graphs/confirm_reproducible_e400088a.csv
+```
 ## Requirements and Description
 
 ### Hardware Dependencies
