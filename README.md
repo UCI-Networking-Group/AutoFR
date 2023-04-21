@@ -5,6 +5,7 @@ For more information, see:
 - [USENIX Security 2023 paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le)
 - [Extended version of our paper](https://arxiv.org/abs/2202.12872)
 - [Project Page](https://athinagroup.eng.uci.edu/projects/ats-on-the-web/)
+- For the Artifact Evaluation, go to [USENIX Security 2023 paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le) and click on the "Abstract PDF" link.
 
 ## AutoFR Dataset
 
