@@ -1,7 +1,10 @@
 # AutoFR: Automated Filter Rule Generation for Adblocking
 We introduce AutoFR, a reinforcement learning (RL) framework to fully automate the process of filter rule creation to block ads and minimize visual breakage optimized per-site. The implementation of the framework is based on the paper, "AutoFR: Automated Filter Rule Generation for Adblocking" (USENIX Security 2023). If you use AutoFR for publication, [please cite us](#citation).
 
-For more information, see our [Project Page](https://athinagroup.eng.uci.edu/projects/ats-on-the-web/).
+For more information, see:
+- [USENIX Security 2023 paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le)
+- [Extended version of our paper](https://arxiv.org/abs/2202.12872)
+- [Project Page](https://athinagroup.eng.uci.edu/projects/ats-on-the-web/)
 
 ## AutoFR Dataset
 
@@ -75,10 +78,27 @@ Explore other possible inputs you can give `scripts/auto_controlled.py` by runni
 > $ python scripts/auto_controlled.py --help
 
 #### Understanding the Output
+Each run of AutoFR will output data into two distinct folders, which are described below. The `data/output` is related to the collection of site snapshots, while `temp_graphs` is related our RL algorithm and outputted filter rules.
 
-* Go to `data/output` to see the raw collected data, such as the outgoing HTTP requests, AdGraphs, and site snapshots. 
-* Go to `temp_graphs` to see the outputted filter rules, the action space, and various other information.
-* The output follows our dataset format. See [AutoFR Dataset](#autofr-dataset).
+Go to `data/output` and go into a folder *AutoFRGControlled\*AdGraph_Snapshots* to see the raw collected data, such as the outgoing HTTP requests, AdGraphs, and site snapshots. 
+* **adgraph_networkx**: This holds the site snapshots. (graphml files)
+* **init_adgraph_site_feedback/adgraph**: This holds the raw AdGraphs before annotations. (See Sec. 4.1 for how we annotate raw AdGraphs). There will be 10 of these, representing ten visits to the site. (JSON files)
+* **init_adgraph_site_feedback/filter_lists**: This holds the rules that we applied (if any). (Text files)
+* **init_adgraph_site_feedback/json**: This holds the collected outgoing HTTP requests.
+* **init_adgraph_site_feedback/screenshots**: This holds a screenshot of the site. (PNG files)
+* **init_adgraph_site_feedback/stats_init.csv**: This holds the counters of ads, images, and text.
+* **init_adgraph_site_feedback/log.log**: This holds the verbose logging of the site visit.
+
+Go to `temp_graphs` and go into a folder *AutoFRGControlled_*, which represents a run of the AutoFR. It will contain the outputted filter rules, the action space, and various other information.
+* **action_values.csv**: This contains information about the multi-arm bandit run, such as the q-value of each action, the number of pulls per action, and whether we put the arm to sleep or not.
+* **dh_graph.json**: This is the hierarchy action space in JSON format. (See Sec. 3.2.1 on how we build the action space.)
+* **dh_nodes_history.json**: This just holds more logging information about which actions we took per time step t.
+* **final_rules.txt**: These are the filter rules that we generated. (ignore the header comments in this file)
+* **low_q_rules.txt**: These are the rules that could block ads but caused breakage beyond the threshold w. (See Sec. 3.2.2 and 3.3)
+* **unknown_rules.txt**: These are rules that we put to sleep. (See Sec. 3.2.2 and Algorithm 1 line 23.)
+* **log.log**: This holds the verbose logging of our algorithm run.
+
+The output follows our dataset format. See [AutoFR Dataset](#autofr-dataset).
 
 #### Test the Rules In-the-Wild
 
@@ -96,6 +116,8 @@ Test the rules by applying it on the site that you created them for.
 
 As an example of how site snapshots can be reused, we provide the following instructions on reproducing our results from the paper. 
 
+(Note that this only works if you are using the changeset used by the paper and the site snapshots collected during that time. Any changes/improvements to the algorithm of AutoFR or how site snapshots are created will alter the results of the generated filter rules)
+
 1. Make sure you have followed the [setup](#setup) instructions.
 2. Open up the AutoFR project directory using a terminal window.
 3. Activate your virtual environment.
@@ -106,8 +128,25 @@ As an example of how site snapshots can be reused, we provide the following inst
    * Full example: 
     > $ python scripts/autofr_use_snapshots.py --site_url "https://www.cricbuzz.com/"  --snapshot_dir AutoFRGEval_www.cricbuzz.com_ad3dce7b/AutoFRGControlled_www.cricbuzz.com_AdGraph_Snapshots_82af60e4
 8. It should print out the same filter rules as listed in the CSV file for that particular site.
+9. (optional) To see the output, go to `temp_graphs` directory and open the newest directory there. See [Understanding the Output](#understanding-the-output) for more information.
 
+For artifact-reviewers and convenience, we also provide a script to automatically check the reproducibility.
+1. Make sure you have followed the [setup](#setup) instructions.
+2. Open up the AutoFR project directory using a terminal window.
+3. Activate your virtual environment.
+4. [Get access to our dataset](#autofr-dataset). 
+5. Download any zips from the dataset into one directory. (you do not need to unzip it)
+6. Download the `Top5K_rules.csv` within our dataset.
+7. > $ python scripts/artifact-review/confirm_reproducibility.py --csv_file_path Top5K_rules.csv --snapshots_dir [path to zips]
 
+The [confirm_reproducibility script](scripts/artifact-review/confirm_reproducibility.py) will output a CSV file that summarizes whether the filter rules match. There will also be summary in the console as well.
+
+Example console output:
+```text
+SUMMARY:
+	- Reproduced 3/3
+	- Final results in temp_graphs/confirm_reproducible_e400088a.csv
+```
 ## Requirements and Description
 
 ### Hardware Dependencies
@@ -117,6 +156,8 @@ m5.2xlarge, which has 8 cores, 32 GiB of memory, 35 GiB
 of storage, and up to 10 Gbps of network bandwidth. We
 recommend something similar, going as low as 16 GiB of
 memory with 20 GiB of storage. 
+
+**Limitations**: Currently, AutoFR does not work for M1 Macbooks. This is a work in progress. 
 
 ### Software Dependencies
 
