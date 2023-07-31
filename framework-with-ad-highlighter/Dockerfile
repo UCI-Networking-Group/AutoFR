@@ -68,6 +68,7 @@ USER user
 COPY autofr autofr/
 COPY setup.py ./
 RUN python3 setup.py develop --user
-
+# quick fix for urllib3
+RUN pip3 install --user urllib3==1.26.16
 USER root
 CMD timeout 10m bash entrypoint.sh

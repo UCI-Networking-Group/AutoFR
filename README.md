@@ -71,12 +71,12 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
 3. Activate your virtual environment.
 4. Choose a site that has ads with AdChoice transparency logos. We use https://cricbuzz.com as an example here.
 5. Choose how many docker instances you can start in parallel. This depends on the number of cores you have on your system. Pass it using the `--chunk_threshold` argument. Below, we use `6` as an example.
-6. > $ python scripts/autofr_controlled.py –site_url
-"https://cricbuzz.com" –chunk_threshold 6
+6. > $ python scripts/autofr_controlled.py --site_url
+"https://cricbuzz.com" --chunk_threshold 6
 7. Filter rules will be presented at the end.
 
-Explore other possible inputs you can give `scripts/auto_controlled.py` by running:
-> $ python scripts/auto_controlled.py --help
+Explore other possible inputs you can give `scripts/autofr_controlled.py` by running:
+> $ python scripts/autofr_controlled.py --help
 
 #### Understanding the Output
 Each run of AutoFR will output data into two distinct folders, which are described below. The `data/output` is related to the collection of site snapshots, while `temp_graphs` is related our RL algorithm and outputted filter rules.

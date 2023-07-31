@@ -15,6 +15,7 @@ setup(name='autofr',
         'requests',
         'numpy',
         'selenium',
-        'pyvirtualdisplay'
+        'pyvirtualdisplay',
+        'urllib3==1.26.16'
     ]
 )

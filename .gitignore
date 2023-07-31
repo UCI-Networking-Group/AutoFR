@@ -138,3 +138,4 @@ adgraphapi/base_dir/**
 adgraphapi/adgraph
 adgraphapi/adgraph-buildgraph.dSYM
 adgraphapi/adgraph.dSYM
+.idea
