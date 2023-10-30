@@ -2,10 +2,11 @@
 We introduce AutoFR, a reinforcement learning (RL) framework to fully automate the process of filter rule creation to block ads and minimize visual breakage optimized per-site. The implementation of the framework is based on the paper, "AutoFR: Automated Filter Rule Generation for Adblocking" (USENIX Security 2023). If you use AutoFR for publication, [please cite us](#citation).
 
 For more information, see:
-- [USENIX Security 2023 paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le)
-- [Extended version of our paper](https://arxiv.org/abs/2202.12872)
+- [USENIX Security 2023 Paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le)
+- [USENIX Security 2023 Slides](https://www.usenix.org/system/files/sec23_slides_le.pdf)
+- [USENIX Security 2023 Artifact Evaluation](https://www.usenix.org/system/files/usenixsecurity23-appendix-le.pdf)
+- [Extended Version](https://arxiv.org/abs/2202.12872)
 - [Project Page](https://athinagroup.eng.uci.edu/projects/ats-on-the-web/)
-- For the Artifact Evaluation, go to [USENIX Security 2023 paper](https://www.usenix.org/conference/usenixsecurity23/presentation/le) and click on the "Abstract PDF" link.
 
 ## AutoFR Dataset
 
@@ -210,13 +211,17 @@ The web changes naturally. AutoFR is only as good as its components. Thus, if a 
 ## Citation
 If you create a publication using AutoFR, please cite the corresponding paper as follows:
 ```
-@inproceedings{le2023autofr,
-  title     = {{AutoFR: Automated Filter Rule Generation for Adblocking}},
-  author    = {Le, Hieu and Elmalaki, Salma and Markopoulou, Athina and Shafiq, Zubair},
-  booktitle = {Proceedings of the 32nd USENIX Security Symposium (USENIX Security)},
-  year      = {2023},
-  month     = aug,
-  address   = {Anaheim, CA}
+@inproceedings {le2023autofr-287192,
+author = {Hieu Le and Salma Elmalaki and Athina Markopoulou and Zubair Shafiq},
+title = {{AutoFR}: Automated Filter Rule Generation for Adblocking},
+booktitle = {32nd USENIX Security Symposium (USENIX Security 23)},
+year = {2023},
+isbn = {978-1-939133-37-3},
+address = {Anaheim, CA},
+pages = {7535--7552},
+url = {https://www.usenix.org/conference/usenixsecurity23/presentation/le},
+publisher = {USENIX Association},
+month = aug
 }
 ```
 We also encourage you to provide us ([athinagroupreleases@gmail.com](mailto:athinagroupreleases@gmail.com)) with a link to your publication. We use this information in reports to our funding agencies.
@@ -227,4 +232,4 @@ Feel free to contact the authors, specifically [Hieu Le](https://levanhieu.com) 
 
 ## Acknowledgements
 
-To integrate [AdGraph](https://github.com/uiowa-irl/AdGraph) successfully, we thank its authors ([Umar Iqbal](https://umariqbal.com/)), who  graciously provided the necessary code to help parse AdGraphs. We include it in [adgraphapi](adgraphapi) with slight modifications.
+To integrate [AdGraph](https://github.com/uiowa-irl/AdGraph) successfully, we thank its authors ([Umar Iqbal](https://umariqbal.com/)), who graciously provided the necessary code to help parse AdGraphs. We include it in [adgraphapi](adgraphapi) with slight modifications.
