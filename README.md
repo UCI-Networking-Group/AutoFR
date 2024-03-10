@@ -38,6 +38,8 @@ For more information, see [Background Information](#background-information).
 
 Follow the instructions below to run AutoFR. [Preview the dependencies](#requirements-and-description).
 
+**See [Debugging Tips](#debugging-tips) to help solve some common problems.**
+
 ### Setup
 
 1. We assume you satisfy the [hardware](#hardware-dependencies) and [OS](#os-dependencies) dependencies.
@@ -52,7 +54,7 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
    1. If you are an artifact reviewer, `git checkout artifact-review`
    2. > git submodule update --init --recursive
 4. Navigate to the project directory using a terminal window.
-5. Create a virtual environment and activate it.
+5. Create a virtual environment and activate it. The "[/save-path/autofrenv]" below is a **placeholder** for your path and name of your environment. As an example, if you have your virtual environments saved under ~/.virtualenvs, then you can do: "~/.virtualenvs/autofrenv"
   > $ virtualenv --python=python3 [/save-path/autofrenv] 
 > 
   > $ source [/save-path/autofrenv]/bin/activate
@@ -71,13 +73,47 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
 2. Open up the AutoFR project directory using a terminal window.
 3. Activate your virtual environment.
 4. Choose a site that has ads with AdChoice transparency logos. We use https://cricbuzz.com as an example here.
-5. Choose how many docker instances you can start in parallel. This depends on the number of cores you have on your system. Pass it using the `--chunk_threshold` argument. Below, we use `6` as an example.
+5. Choose how many docker instances you can start in parallel. This depends on the number of cores you have on your system. Pass it using the `--chunk_threshold` argument. Below, we use `6` as an example. **The `--init_state_iterations 10` denotes that you require the run to collect 10 site snapshots.**
 6. > $ python scripts/autofr_controlled.py --site_url
-"https://cricbuzz.com" --chunk_threshold 6
+"https://cricbuzz.com" --chunk_threshold 6 --init_state_iterations 10
 7. Filter rules will be presented at the end.
 
 Explore other possible inputs you can give `scripts/autofr_controlled.py` by running:
 > $ python scripts/autofr_controlled.py --help
+
+### Debugging Tips
+
+Thank you for trying to install and run AutoFR, here I provided some debugging tips.
+
+**A.** If you get exceptions such as `InvalidSiteFeedbackException: Expected 10 init states but got 0`, this means that you are not able to collect valid site snapshots of a website. A valid site snapshot requires that ads are detected (counter of ads > 0).
+
+**A. Reduce Required Site Snapshots:** 
+There are a few things you can do. If the exception says that you are able to collect some site snapshots like `Expected 10 init states but got 4`, then you may want to reduce the number of required site snapshots by passing in a different value for `--init_state_iterations`
+
+> $ python scripts/autofr_controlled.py --site_url
+"https://cricbuzz.com" --chunk_threshold 6 --init_state_iterations 4
+
+**A. Reduce Parallel Processes:**
+
+It could be possible that your machine cannot handle the number of parallel processes. Try to reduce the number by changing `--chunk_threshold`
+
+> $ python scripts/autofr_controlled.py --site_url
+"https://cricbuzz.com" --chunk_threshold 2 --init_state_iterations 4
+
+**A. Can Ad Highlighter Detect Ads for the Given Site?**
+
+It could simply mean that Ad Highlighter cannot detect any ads for the given website. This could be due to many reasons, such as the website changing over time and no longer serving ads that can be detected by Ad Highlighter, or it could be detecting that you are using a crawler (AutoFR uses Selenium) and purposefully not serving ads.
+
+To verify whether Ad Highlighter can detect ads for the given website, go to the [web extension](https://github.com/UCI-Networking-Group/ad-highlighter-autofr/tree/e089fa9e9a7e3bb45042e4f268193a8d4479fcce/perceptual-adblocker) and download its code and install it manually on Chrome.
+1. Download the code above. 
+2. Open Chrome > Manage Extensions > Load unpacked
+3. Choose the perceptual-adblocker directory (this is Ad Highlighter). This should install the web extension. 
+4. Remember to disable any adblocker that active for your browser 
+5. Visit the website that you are testing with AutoFR and see if Ad Highlighter will identify those ads (there should be an red-ish overlay on those ads)
+6. Once you are done verifying, make sure to disable Ad Highlighter and re-active any adblockers before.
+
+If Ad Highlighter does not identify any ads for the given website, this means that you need to update Ad Highlighter code to detect ads. This is beyond the scope of this README, please contact the authors for help.
+
 
 #### Understanding the Output
 Each run of AutoFR will output data into two distinct folders, which are described below. The `data/output` is related to the collection of site snapshots, while `temp_graphs` is related our RL algorithm and outputted filter rules.

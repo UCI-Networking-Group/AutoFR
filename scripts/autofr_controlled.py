@@ -126,7 +126,7 @@ def main():
                         type=int,
                         default=CHUNK_LIST_THRESHOLD,
                         required=False,
-                        help='How many times at once we will spawn a browser instance')
+                        help='How many times at once we will spawn a browser instance (reduce this number if your machine cannot handle many parallel processes)')
     parser.add_argument('--gamma',
                         type=str,
                         required=False,
@@ -141,7 +141,7 @@ def main():
                         type=float,
                         default=0.9,
                         required=False,
-                        help='Threshold w: should be between 0 and 1')
+                        help='Preference to avoid visual breakage. Between 0 and 1, use number closer to 1 if you really care about avoiding breakage.')
     parser.add_argument('--iteration_threshold',
                         required=False,
                         type=int,
@@ -151,7 +151,7 @@ def main():
                         required=False,
                         type=int,
                         default=10,
-                        help='Number of times during init stage')
+                        help='Number of site snapshots required for AutoFR to run (reduce this number if the process cannot detect ads easily for the website)')
     parser.add_argument('--default_q_value', default=DEFAULT_Q_VALUE, type=float, required=False,
                         help='whether we do initializing only. New filter rules will be outputted')
     parser.add_argument('--reward_func_name', default=RewardByCasesVer1.get_classname(),

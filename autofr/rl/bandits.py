@@ -186,7 +186,7 @@ class AutoFRMultiArmedBandit(MultiArmedBandit):
             raise InvalidSiteFeedbackException("Could not find init site snapshot")
 
         if execute_done_count < init_state_iterations:
-            logger.warning(f"Expected {init_state_iterations} init states but got {execute_done_count}")
+            logger.warning(f"Expected {init_state_iterations} site snapshots but got {execute_done_count}")
 
         # keep the state that has larger than 0 ad counter
         if ignore_states_with_zero_ads:
@@ -290,7 +290,7 @@ class AutoFRMultiArmedBandit(MultiArmedBandit):
 
         if execute_done_count < init_state_iterations:
             raise InvalidSiteFeedbackException(
-                f"Expected {init_state_iterations} init states but got {execute_done_count}")
+                f"Expected {init_state_iterations} site snapshots but got {execute_done_count}")
 
         # keep the state that has larger than 0 ad counter
         if ignore_states_with_zero_ads:
