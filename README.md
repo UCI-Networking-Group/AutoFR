@@ -81,26 +81,71 @@ Follow the instructions below to run AutoFR. [Preview the dependencies](#require
 Explore other possible inputs you can give `scripts/autofr_controlled.py` by running:
 > $ python scripts/autofr_controlled.py --help
 
+```text
+(autofrenv) python scripts/autofr_controlled.py --help
+usage: autofr_controlled.py [-h] --site_url SITE_URL [--output_directory OUTPUT_DIRECTORY] [--chunk_threshold CHUNK_THRESHOLD]
+                            [--gamma GAMMA] [--confidence_ucb CONFIDENCE_UCB] [--w_threshold W_THRESHOLD]
+                            [--iteration_threshold ITERATION_THRESHOLD] [--init_state_iterations INIT_STATE_ITERATIONS]
+                            [--default_q_value DEFAULT_Q_VALUE] [--reward_func_name {RewardByCasesVer1}]
+                            [--bandit_klass_name {DomainHierarchyMABControlled}] [--action_space_klass_name {ActionSpace}]
+                            [--log_level LOG_LEVEL]  
+
+We run AutoFR-C.
+
+options:
+  -h, --help            show this help message and exit
+  --site_url SITE_URL   Site to test
+  --output_directory OUTPUT_DIRECTORY
+                        output directory for saving agent
+  --chunk_threshold CHUNK_THRESHOLD
+                        How many times at once we will spawn a browser instance (reduce this number if your machine cannot
+                        handle many parallel processes)
+  --gamma GAMMA         How much do we care about future rewards. Default is 1/n. If passed in, it will be treated as a float
+                        value
+  --confidence_ucb CONFIDENCE_UCB
+                        Confidence level for UCB calculation
+  --w_threshold W_THRESHOLD
+                        Preference to avoid visual breakage. Between 0 and 1, use number closer to 1 if you really care about
+                        avoiding breakage.
+  --iteration_threshold ITERATION_THRESHOLD
+                        Multiplier to how many iterations per round
+  --init_state_iterations INIT_STATE_ITERATIONS
+                        Number of site snapshots required for AutoFR to run (reduce this number if the process cannot detect ads
+                        easily for the website)
+  --default_q_value DEFAULT_Q_VALUE
+                        whether we do initializing only. New filter rules will be outputted
+  --reward_func_name {RewardByCasesVer1}
+                        Name of reward function
+  --bandit_klass_name {DomainHierarchyMABControlled} 
+                        Name of bandit control class 
+  --action_space_klass_name {ActionSpace}
+                        Name of action space class   
+  --log_level LOG_LEVEL
+                        Log level
+```
+
 ### Debugging Tips
 
 Thank you for trying to install and run AutoFR, here I provided some debugging tips.
 
-**A.** If you get exceptions such as `InvalidSiteFeedbackException: Expected 10 init states but got 0`, this means that you are not able to collect valid site snapshots of a website. A valid site snapshot requires that ads are detected (counter of ads > 0).
+#### InvalidSiteFeedbackException: Expected 10 init states but got X
 
-**A. Reduce Required Site Snapshots:** 
+If you get exceptions such as `InvalidSiteFeedbackException: Expected 10 init states but got 0`, this means that you are not able to collect valid site snapshots of a website. A valid site snapshot requires that ads are detected (counter of ads > 0).
+
+*A. Reduce Required Site Snapshots:* 
 There are a few things you can do. If the exception says that you are able to collect some site snapshots like `Expected 10 init states but got 4`, then you may want to reduce the number of required site snapshots by passing in a different value for `--init_state_iterations`
 
 > $ python scripts/autofr_controlled.py --site_url
 "https://cricbuzz.com" --chunk_threshold 6 --init_state_iterations 4
 
-**A. Reduce Parallel Processes:**
+*B. Reduce Parallel Processes:*
 
 It could be possible that your machine cannot handle the number of parallel processes. Try to reduce the number by changing `--chunk_threshold`
 
 > $ python scripts/autofr_controlled.py --site_url
 "https://cricbuzz.com" --chunk_threshold 2 --init_state_iterations 4
 
-**A. Can Ad Highlighter Detect Ads for the Given Site?**
+*C. Can Ad Highlighter Detect Ads for the Given Site?*
 
 It could simply mean that Ad Highlighter cannot detect any ads for the given website. This could be due to many reasons, such as the website changing over time and no longer serving ads that can be detected by Ad Highlighter, or it could be detecting that you are using a crawler (AutoFR uses Selenium) and purposefully not serving ads.
 
@@ -115,7 +160,7 @@ To verify whether Ad Highlighter can detect ads for the given website, go to the
 If Ad Highlighter does not identify any ads for the given website, this means that you need to update Ad Highlighter code to detect ads. This is beyond the scope of this README, please contact the authors for help.
 
 
-#### Understanding the Output
+### Understanding the Output
 Each run of AutoFR will output data into two distinct folders, which are described below. The `data/output` is related to the collection of site snapshots, while `temp_graphs` is related our RL algorithm and outputted filter rules.
 
 Go to `data/output` and go into a folder *AutoFRGControlled\*AdGraph_Snapshots* to see the raw collected data, such as the outgoing HTTP requests, AdGraphs, and site snapshots. 
@@ -138,7 +183,7 @@ Go to `temp_graphs` and go into a folder *AutoFRGControlled_*, which represents 
 
 The output follows our dataset format. See [AutoFR Dataset](#autofr-dataset).
 
-#### Test the Rules In-the-Wild
+### Test the Rules In-the-Wild
 
 Test the rules by applying it on the site that you created them for. 
 
