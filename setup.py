@@ -9,7 +9,7 @@ setup(name='autofr',
     python_requires='>=3.6',
     install_requires=[
         'tldextract',
-        'networkx',
+        'networkx>=2.6.2',
         'adblockparser',
         'pandas',
         'requests',

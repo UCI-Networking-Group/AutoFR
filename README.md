@@ -126,7 +126,7 @@ options:
 
 ### Debugging Tips
 
-Thank you for trying to install and run AutoFR, here I provided some debugging tips.
+Thank you for trying AutoFR, here I provide some debugging tips.
 
 #### InvalidSiteFeedbackException: Expected 10 init states but got X
 

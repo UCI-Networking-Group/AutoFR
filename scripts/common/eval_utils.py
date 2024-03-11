@@ -25,6 +25,7 @@ CHROME_DRIVER_PATH = os.path.expanduser("~") + os.sep + "adgraph_chrome_driver/c
 ITERATION_MULTIPLIER = 100
 REWARD_FUNC = RewardByCasesVer1.get_classname()
 
+
 def run_autofr_with_snapshots(site_url: str,
                               snapshot_directory: str,
                               output_directory: str,
@@ -32,6 +33,12 @@ def run_autofr_with_snapshots(site_url: str,
                               do_init_only: bool = False,
                               w: float = W_VALUE,
                               bandit_klass: typing.Callable = DomainHierarchyMABControlled,
+                              iteration_threshold: int = ITERATION_MULTIPLIER,
+                              init_state_iterations: int = INIT_ITERATIONS,
+                              default_q_value: float = DEFAULT_Q_VALUE,
+                              reward_func_name: str = REWARD_FUNC,
+                              gamma: typing.Optional[float] = GAMMA,
+                              confidence_ucb: float = UCB_CONFIDENCE,
                               **kwargs) \
         -> typing.Tuple[AutoFRControlledEnvironment, AutoFRResults, str]:
     """
@@ -64,15 +71,15 @@ def run_autofr_with_snapshots(site_url: str,
     autofr_env, results = run_autofr_controlled_given_snapshots(site_url,
                                                                 snapshot_directory,
                                                                 w,
-                                                                GAMMA,
-                                                                UCB_CONFIDENCE,
+                                                                gamma,
+                                                                confidence_ucb,
                                                                 autofr_output_directory,
                                                                 logger,
-                                                                iteration_threshold=ITERATION_MULTIPLIER,
-                                                                init_state_iterations=INIT_ITERATIONS,
+                                                                iteration_threshold=iteration_threshold,
+                                                                init_state_iterations=init_state_iterations,
                                                                 do_init_only=do_init_only,
-                                                                default_q_value=DEFAULT_Q_VALUE,
-                                                                reward_func_name=REWARD_FUNC,
+                                                                default_q_value=default_q_value,
+                                                                reward_func_name=reward_func_name,
                                                                 destroy=False,
                                                                 bandit_klass=bandit_klass,
                                                                 **kwargs)
@@ -120,16 +127,14 @@ def run_autofr_controlled_given_snapshots(site_url: str,
                         action_space_class=action_space_klass)
 
     env = autofrg_env_klass(site_url, bandit, agent,
-                                iteration_threshold=iteration_threshold,
-                                output_directory=output_directory,
-                                do_init_only=do_init_only)
+                            iteration_threshold=iteration_threshold,
+                            output_directory=output_directory,
+                            do_init_only=do_init_only)
 
-    #logger.debug(f"Running experiment for {site_url}")
+    # logger.debug(f"Running experiment for {site_url}")
     results = env.run(init_state_iterations=init_state_iterations)
 
     if destroy:
         env.destroy(data=True, rules=False)
 
     return env, results
-
-

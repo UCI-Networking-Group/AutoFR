@@ -179,6 +179,14 @@ def main():
     bandit_klass = getattr(bandits, args.bandit_klass_name)
     action_space_klass = getattr(action_space, args.action_space_klass_name)
 
+    # use gamma = None as 1/n
+    gamma = None
+    try:
+        if args.gamma:
+            gamma = float(args.gamma)
+    except ValueError:
+        pass
+
     site_url = args.site_url
 
     # Get snapshots
@@ -195,9 +203,16 @@ def main():
         autofr_env, results, autofr_dir = run_autofr_with_snapshots(site_url,
                                                                     snapshot_directory,
                                                                     args.output_directory,
+                                                                    iteration_threshold=args.iteration_threshold,
+                                                                    init_state_iterations=args.init_state_iterations,
+                                                                    w=args.w_threshold,
+                                                                    default_q_value=args.default_q_value,
+                                                                    confidence_ucb=args.confidence_ucb,
                                                                     log_level=args.log_level,
                                                                     bandit_klass=bandit_klass,
-                                                                    action_space_klass=action_space_klass)
+                                                                    action_space_klass=action_space_klass,
+                                                                    reward_func_name=args.reward_func_name,
+                                                                    gamma=gamma)
         autofr_env.destroy(rules=False)
         autofr_time_sec = int(np.average(results.time_per_experiment) + results.time_init_experiment)
 
