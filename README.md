@@ -251,6 +251,7 @@ We list the dependencies that are necessary to run AutoFR. Please follow instruc
 AutoFR has been tested on Debian 5.10 and Ubuntu 18.04.6 LTS.
 
 #### Core Dependencies
+
 * Python 3.6+
 * git
 * pip3 
@@ -260,12 +261,14 @@ AutoFR has been tested on Debian 5.10 and Ubuntu 18.04.6 LTS.
 #### Python Dependencies
 
 * tldextract
-* networkx
+* networkx (>=2.6.2)
 * adblockparser
 * pandas
 * numpy
 * selenium
 * pyvirtualdisplay
+
+See [setup.py](setup.py).
 
 #### Prior Work Dependencies
 

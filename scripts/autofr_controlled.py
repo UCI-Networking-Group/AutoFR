@@ -23,6 +23,7 @@ from scripts.common.eval_utils import run_autofr_with_snapshots, \
 
 logger = logging.getLogger(__name__)
 
+
 def setup_and_run_env(site_url: str,
                       output_directory: str,
                       logger: logging.Logger,
@@ -35,7 +36,6 @@ def setup_and_run_env(site_url: str,
                       filter_list_path: str = None,
                       zip_output: bool = True,
                       destroy_output: bool = True) -> AutoFRControlledEnvironment:
-
     reward_func_name: str = RewardByCasesVer1.get_classname()
     base_name = os.path.basename(output_directory)
 
@@ -54,12 +54,12 @@ def setup_and_run_env(site_url: str,
                                  output_directory=output_directory)
 
     env = AutoFRControlledEnvironment(site_url, bandit, agent,
-                                          output_directory=output_directory,
-                                          do_init_only=do_init_only)
+                                      output_directory=output_directory,
+                                      do_init_only=do_init_only)
 
     logger.info(f"Finding {init_state_iterations} SiteSnapshots for {site_url} only")
     env.run_init_state_only(init_state_iterations=init_state_iterations,
-                                filter_list_path=filter_list_path)
+                            filter_list_path=filter_list_path)
     if zip_output:
         env.zip_output()
     if destroy_output:
@@ -67,9 +67,11 @@ def setup_and_run_env(site_url: str,
 
     return env
 
+
 def get_snapshots(site_url: str,
                   output_directory: str,
                   filter_list_path: str = None,
+                  init_state_iterations: int = INIT_ITERATIONS,
                   chunk_threshold: int = CHUNK_LIST_THRESHOLD,
                   log_level: str = str(logging.INFO)) \
         -> AutoFRControlledEnvironment:
@@ -100,7 +102,7 @@ def get_snapshots(site_url: str,
                             AD_HIGHLIGHTER_EXT_PATH,
                             BROWSER_BINARY_PATH,
                             CHROME_DRIVER_PATH,
-                            init_state_iterations=INIT_ITERATIONS,
+                            init_state_iterations=init_state_iterations,
                             do_init_only=True,
                             filter_list_path=filter_list_path,
                             zip_output=False,
@@ -175,7 +177,6 @@ def main():
     args = parser.parse_args()
     print(args)
 
-
     bandit_klass = getattr(bandits, args.bandit_klass_name)
     action_space_klass = getattr(action_space, args.action_space_klass_name)
 
@@ -189,17 +190,18 @@ def main():
 
     site_url = args.site_url
 
-    # Get snapshots
     try:
+        # Get snapshots
         before_snapshot = time.time()
         snapshot_env = get_snapshots(site_url,
                                      args.output_directory,
+                                     init_state_iterations=args.init_state_iterations,
                                      log_level=args.log_level,
                                      chunk_threshold=args.chunk_threshold)
         snapshot_directory = snapshot_env.bandit.get_base_data_dir()
         snapshot_time_sec = int(time.time() - before_snapshot)
 
-        # Run AutoFR
+        # Run AutoFR with snapshots
         autofr_env, results, autofr_dir = run_autofr_with_snapshots(site_url,
                                                                     snapshot_directory,
                                                                     args.output_directory,
@@ -218,9 +220,11 @@ def main():
 
         init_site_feedback = autofr_env.bandit.init_site_feedback
         site_snapshots_count = len(autofr_env.bandit.site_snapshots)
-        #logger.debug(f"Baseline site feedback of {site_url} is {init_site_feedback}")
-        logger.info(f"Collecting {site_snapshots_count} snapshots took {snapshot_time_sec} sec, AutoFR experiment took {autofr_time_sec} sec")
-        logger.info(f"\nOutput dir:\n\tSnapshots saved at {snapshot_directory}\n\tFilter rules saved at {autofr_env.output_directory}")
+        # logger.debug(f"Baseline site feedback of {site_url} is {init_site_feedback}")
+        logger.info(
+            f"Collecting {site_snapshots_count} snapshots took {snapshot_time_sec} sec, AutoFR experiment took {autofr_time_sec} sec")
+        logger.info(
+            f"\nOutput dir:\n\tSnapshots saved at {snapshot_directory}\n\tFilter rules saved at {autofr_env.output_directory}")
     except (WebDriverException, AutoFRException, OSError, subprocess.CalledProcessError) as e:
         logger.warning(f"Could not process {site_url}", exc_info=True)
     except Exception as e:
@@ -229,4 +233,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
