@@ -159,6 +159,13 @@ To verify whether Ad Highlighter can detect ads for the given website, go to the
 
 If Ad Highlighter does not identify any ads for the given website, this means that you need to update Ad Highlighter code to detect ads. This is beyond the scope of this README, please contact the authors for help.
 
+#### Networkx Cannot Read Site Snapshots
+
+If you encounter an error where networkx cannot read the site snapshots due to the graphml files containing data of `long` types, you need to make sure your networkx version is >= 2.6.2.
+
+1. Use pip to see the version you are using: `pip show networkx`
+2. Try to upgrade your networkx: `pip install networkx --upgrade`
+
 
 ### Understanding the Output
 Each run of AutoFR will output data into two distinct folders, which are described below. The `data/output` is related to the collection of site snapshots, while `temp_graphs` is related our RL algorithm and outputted filter rules.
@@ -213,6 +220,51 @@ As an example of how site snapshots can be reused, we provide the following inst
 8. It should print out the same filter rules as listed in the CSV file for that particular site.
 9. (optional) To see the output, go to `temp_graphs` directory and open the newest directory there. See [Understanding the Output](#understanding-the-output) for more information.
 
+Explore other possible inputs you can give `scripts/autofr_use_snapshots.py` by running:
+> $ python scripts/autofr_use_snapshots.py --help
+
+```text
+(autofrenv) python scripts/autofr_use_snapshots.py --help                                
+usage: autofr_use_snapshots.py [-h] --site_url SITE_URL [--output_directory OUTPUT_DIRECTORY] --snapshot_dir SNAPSHOT_DIR
+                               [--gamma GAMMA] [--confidence_ucb CONFIDENCE_UCB] [--w_threshold W_THRESHOLD]
+                               [--iteration_threshold ITERATION_THRESHOLD] [--init_state_iterations INIT_STATE_ITERATIONS]
+                               [--default_q_value DEFAULT_Q_VALUE] [--reward_func_name {RewardByCasesVer1}]
+                               [--bandit_klass_name {DomainHierarchyMABControlled}] [--action_space_klass_name {ActionSpace}]
+                               [--log_level LOG_LEVEL]
+
+We run AutoFR-C using the site snapshots given.
+
+options:
+  -h, --help            show this help message and exit
+  --site_url SITE_URL   Site to test
+  --output_directory OUTPUT_DIRECTORY
+                        output directory for saving agent
+  --snapshot_dir SNAPSHOT_DIR
+                        Path to already init files
+  --gamma GAMMA         How much do we care about future rewards. Default is 1/n. If passed in, it will be treated as a float
+                        value
+  --confidence_ucb CONFIDENCE_UCB
+                        Confidence level for UCB calculation
+  --w_threshold W_THRESHOLD
+                        Preference to avoid visual breakage. Between 0 and 1, use number closer to 1 if you really care about avoiding breakage.
+  --iteration_threshold ITERATION_THRESHOLD
+                        Multiplier to how many iterations per round
+  --init_state_iterations INIT_STATE_ITERATIONS
+                        Number of site snapshots required for AutoFR to run (reduce this number if the process cannot detect ads easily for the website)
+  --default_q_value DEFAULT_Q_VALUE
+                        whether we do initializing only. New filter rules will be outputted
+  --reward_func_name {RewardByCasesVer1}
+                        Name of reward function
+  --bandit_klass_name {DomainHierarchyMABControlled} 
+                        Name of bandit control class 
+  --action_space_klass_name {ActionSpace}
+                        Name of action space class   
+  --log_level LOG_LEVEL
+                        Log level                     
+```
+
+### Confirm Reproducibility
+
 For artifact-reviewers and convenience, we also provide a script to automatically check the reproducibility.
 1. Make sure you have followed the [setup](#setup) instructions.
 2. Open up the AutoFR project directory using a terminal window.
@@ -230,6 +282,7 @@ SUMMARY:
 	- Reproduced 3/3
 	- Final results in temp_graphs/confirm_reproducible_e400088a.csv
 ```
+
 ## Requirements and Description
 
 ### Hardware Dependencies
